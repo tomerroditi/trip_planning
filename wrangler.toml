@@ -2,10 +2,14 @@
 # (/api/*), and the static React app (everything else) from a single deploy.
 #
 # Deploys via Workers Builds (Git integration): on each push, Cloudflare runs
-# `npm install` then `npx wrangler deploy`. The [build] step below builds the
-# React app (app/dist is gitignored) before the Worker is bundled, so no
-# dashboard build command is required.
-name = "trip-planner"
+# `npm install` then the configured deploy command. That deploy command MUST be
+# `npx wrangler deploy` — NOT `wrangler versions upload`, which cannot apply the
+# Durable Object migration this Worker ships (the McpAgent). The [build] step
+# below builds the React app (app/dist is gitignored) before bundling, so no
+# separate dashboard build command is required.
+#
+# `name` must match the connected Workers Builds service.
+name = "trip-planning"
 main = "src/index.ts"
 compatibility_date = "2026-06-25"
 compatibility_flags = ["nodejs_compat"]
