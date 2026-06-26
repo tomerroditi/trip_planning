@@ -1,0 +1,55 @@
+# Cloudflare Worker — serves the MCP endpoint (/mcp, /sse), the read API
+# (/api/*), and the static React app (everything else) from a single deploy.
+#
+# Before first deploy:
+#   1. wrangler d1 create trip-planner   → paste the database_id below
+#   2. wrangler d1 migrations apply trip-planner --remote
+#   3. npm run db:seed                   → loads the New Zealand trip
+#   4. npm run deploy
+name = "trip-planner"
+main = "src/index.ts"
+compatibility_date = "2026-06-25"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[observability]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# D1 — serverless SQLite. The shared source of truth between the MCP write
+# path and the app's read path.
+# ---------------------------------------------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "trip-planner"
+database_id = "REPLACE_WITH_DATABASE_ID"   # filled in by `wrangler d1 create trip-planner`
+migrations_dir = "migrations"
+
+# ---------------------------------------------------------------------------
+# Static assets — the built React app (app/dist). The Worker runs first for
+# the API/MCP routes; every other path is served from assets, falling back to
+# index.html so client-side routing works.
+# ---------------------------------------------------------------------------
+[assets]
+directory = "app/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/mcp", "/mcp/*", "/sse", "/sse/*", "/api/*"]
+
+# ---------------------------------------------------------------------------
+# Durable Object backing the McpAgent. Uses SQLite-backed storage (free plan).
+# ---------------------------------------------------------------------------
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "TripMcp"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TripMcp"]
+
+# ---------------------------------------------------------------------------
+# The single trip rendered by v1 (the schema already supports many). The app
+# and read API default to this id; override per request with ?trip=<id>.
+# ---------------------------------------------------------------------------
+[vars]
+DEFAULT_TRIP_ID = "nz-south-island"

@@ -1,0 +1,48 @@
+{
+  "name": "trip-planner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Conversational trip planner — Claude writes structured trip data via an MCP server on a Cloudflare Worker; a React + Leaflet app renders it.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:app": "vite --config app/vite.config.ts",
+    "build": "npm run gen:seed && npm run build:app",
+    "build:app": "vite build --config app/vite.config.ts",
+    "gen:seed": "tsx scripts/gen-seed.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p app/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy": "npm run build && wrangler deploy",
+    "db:create": "wrangler d1 create trip-planner",
+    "db:migrate": "wrangler d1 migrations apply trip-planner --remote",
+    "db:migrate:local": "wrangler d1 migrations apply trip-planner --local",
+    "db:seed": "npm run gen:seed && wrangler d1 execute trip-planner --remote --file=./seed/seed.sql",
+    "db:seed:local": "npm run gen:seed && wrangler d1 execute trip-planner --local --file=./seed/seed.sql"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "agents": "^0.16.2",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260626.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/leaflet": "^1.9.21",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "better-sqlite3": "^11.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9",
+    "wrangler": "^4.105.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
