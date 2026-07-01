@@ -14,9 +14,48 @@ body {
   font-family: "DM Sans", system-ui, sans-serif;
   color: #283228;
   background: #f4efe4;
+  /* Stop iOS from letting the page rubber-band behind the fixed chrome. */
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
 }
 #root {
   height: 100vh;
+}
+
+/* Full-height shell that respects the mobile browser's dynamic toolbar
+   (100dvh) while falling back to 100vh on older engines. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+#root {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Shared scroll container for a tab's content. Desktop padding by default;
+   tighter, safe-area-aware padding on phones. */
+.page-scroll {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 28px 30px 50px;
+}
+@media (max-width: 820px) {
+  .page-scroll {
+    padding: 16px 14px calc(26px + env(safe-area-inset-bottom));
+  }
+  /* Collapse desktop multi-column grids to a single column on phones. */
+  .grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+  /* Tap targets shouldn't zoom the page on focus (iOS zooms inputs < 16px). */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: max(16px, 1em);
+  }
 }
 
 ::-webkit-scrollbar {

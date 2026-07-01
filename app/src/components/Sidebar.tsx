@@ -1,67 +1,9 @@
-import type { CSSProperties, ReactNode } from "react";
-import type { Tab } from "../App";
+import type { CSSProperties } from "react";
 import type { TripState } from "../types";
+import { NAV, type Tab } from "../nav";
 import { C, FREDOKA } from "../theme";
 import { countdownDays, initials } from "../derive";
 import { dateRangeLabel } from "../format";
-
-const ICONS: Record<Tab, ReactNode> = {
-  overview: (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="7" height="7" rx="2" />
-      <rect x="14" y="3" width="7" height="7" rx="2" />
-      <rect x="3" y="14" width="7" height="7" rx="2" />
-      <rect x="14" y="14" width="7" height="7" rx="2" />
-    </svg>
-  ),
-  itinerary: (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none" />
-      <line x1="9" y1="6" x2="20" y2="6" />
-      <line x1="9" y1="12" x2="20" y2="12" />
-      <line x1="9" y1="18" x2="20" y2="18" />
-    </svg>
-  ),
-  map: (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11Z" />
-      <circle cx="12" cy="10" r="2.4" />
-    </svg>
-  ),
-  budget: (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="12" r="5.5" />
-      <path d="M14 7.2a5.5 5.5 0 0 1 0 9.6" />
-    </svg>
-  ),
-  stays: (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 18v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5" />
-      <line x1="3" y1="18" x2="3" y2="21" />
-      <line x1="21" y1="18" x2="21" y2="21" />
-      <path d="M7 11V8.5A1.5 1.5 0 0 1 8.5 7h7A1.5 1.5 0 0 1 17 8.5V11" />
-    </svg>
-  ),
-  docs: (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14 3v5h5" />
-      <path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
-      <line x1="9" y1="13" x2="15" y2="13" />
-      <line x1="9" y1="16.5" x2="13" y2="16.5" />
-    </svg>
-  ),
-};
-
-const NAV: { tab: Tab; label: string }[] = [
-  { tab: "overview", label: "Overview" },
-  { tab: "itinerary", label: "Itinerary" },
-  { tab: "map", label: "Map & route" },
-  { tab: "budget", label: "Budget" },
-  { tab: "stays", label: "Stays" },
-  { tab: "docs", label: "Docs & links" },
-];
 
 export function Sidebar({
   state,
@@ -114,8 +56,8 @@ export function Sidebar({
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {NAV.map(({ tab: t, label }) => {
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, overflowY: "auto", minHeight: 0 }}>
+        {NAV.map(({ tab: t, label, icon }) => {
           const active = tab === t;
           return (
             <button
@@ -130,16 +72,17 @@ export function Sidebar({
                 border: "none",
                 cursor: "pointer",
                 textAlign: "left",
-                padding: "11px 13px",
+                padding: "10px 13px",
                 borderRadius: 13,
                 fontFamily: "inherit",
                 fontSize: 14.5,
                 fontWeight: 600,
                 background: active ? C.green : "transparent",
                 color: active ? C.page : C.muted5,
+                flexShrink: 0,
               }}
             >
-              {ICONS[t]}
+              {icon}
               <span>{label}</span>
             </button>
           );

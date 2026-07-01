@@ -7,7 +7,7 @@
 //
 // Run via `npm run gen:seed` (tsx).
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSeedRows, SEED_TABLES, TRIP } from "../src/db/seed.ts";
@@ -68,11 +68,21 @@ function buildSeedSql(): string {
 }
 
 function buildSchemaSql(): string {
-  const migration = readFileSync(resolve(root, "migrations/0001_init.sql"), "utf8");
+  // Concatenate every migration in order so schema.sql (the one-shot
+  // `wrangler d1 execute --file=schema.sql` path) always reflects the full
+  // schema, not just the initial migration.
+  const dir = resolve(root, "migrations");
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  const body = files
+    .map((f) => readFileSync(resolve(dir, f), "utf8").replace(/^-- Trip Planner — D1 schema \([^)]*\)\.\n/, "").trim())
+    .join("\n\n");
   return (
-    "-- GENERATED from migrations/0001_init.sql — do not edit by hand.\n" +
+    "-- GENERATED from migrations/*.sql — do not edit by hand.\n" +
     "-- One-shot schema for `wrangler d1 execute trip-planner --file=schema.sql`.\n\n" +
-    migration.replace(/^-- Trip Planner — D1 schema \(migration 0001\)\.\n/, "")
+    body +
+    "\n"
   );
 }
 

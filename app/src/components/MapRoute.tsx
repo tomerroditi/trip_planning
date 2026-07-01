@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { normLoc } from "../../../shared/geo";
 import { computeStops, type Stop } from "../derive";
+import { useIsMobile } from "../hooks";
 import { C, FREDOKA } from "../theme";
 import type { TripState } from "../types";
 
@@ -21,6 +22,7 @@ export function MapRoute({ state }: { state: TripState }) {
   const stops = useMemo(() => computeStops(state), [state]);
   const located = useMemo(() => stops.filter((s) => s.coords), [stops]);
   const [selected, setSelected] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -59,6 +61,21 @@ export function MapRoute({ state }: { state: TripState }) {
       markers.current = {};
     };
   }, []);
+
+  // Leaflet needs to recompute its size when the panel changes shape (the
+  // desktop↔mobile layout swap resizes the map container).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const t = window.setTimeout(() => {
+      try {
+        map.invalidateSize();
+      } catch {
+        /* ignore */
+      }
+    }, 240);
+    return () => window.clearTimeout(t);
+  }, [isMobile]);
 
   // (Re)draw markers and the route whenever the located stops change.
   useEffect(() => {
@@ -103,9 +120,22 @@ export function MapRoute({ state }: { state: TripState }) {
   let pinIdx = 0;
 
   return (
-    <div className="fade-up" style={{ height: "100%", display: "flex" }}>
-      <div style={{ width: 344, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", background: C.panel }}>
-        <div style={{ padding: "20px 22px 14px" }}>
+    <div className="fade-up" style={{ height: "100%", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
+      <div
+        style={{
+          width: isMobile ? "100%" : 344,
+          flexShrink: 0,
+          order: isMobile ? 2 : 0,
+          flex: isMobile ? "1 1 auto" : "0 0 auto",
+          minHeight: 0,
+          borderRight: isMobile ? "none" : `1px solid ${C.border}`,
+          borderTop: isMobile ? `1px solid ${C.border}` : "none",
+          display: "flex",
+          flexDirection: "column",
+          background: C.panel,
+        }}
+      >
+        <div style={{ padding: isMobile ? "14px 16px 10px" : "20px 22px 14px" }}>
           <h2 style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 20, margin: 0 }}>Route &amp; stops</h2>
           <p style={{ fontSize: 13, color: C.muted, margin: "6px 0 0" }}>
             {located.length} places · auto-built from your itinerary &amp; stays
@@ -147,7 +177,15 @@ export function MapRoute({ state }: { state: TripState }) {
           {stops.length === 0 && <div style={{ fontSize: 13, color: C.muted3, padding: "8px 4px" }}>No stops yet.</div>}
         </div>
       </div>
-      <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
+      <div
+        style={{
+          order: isMobile ? 1 : 0,
+          flex: isMobile ? "0 0 auto" : 1,
+          height: isMobile ? "44vh" : "auto",
+          position: "relative",
+          minWidth: 0,
+        }}
+      >
         <div ref={mapEl} style={{ position: "absolute", inset: 0 }} />
         <div style={{ position: "absolute", left: 18, bottom: 18, zIndex: 500, background: "rgba(251,248,241,.95)", border: `1px solid ${C.border}`, borderRadius: 13, padding: "11px 15px", fontSize: 12, color: C.muted4, backdropFilter: "blur(4px)" }}>
           <div style={{ fontWeight: 600, color: C.ink, marginBottom: 4 }}>Your live route</div>

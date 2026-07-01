@@ -393,4 +393,49 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       return withState(tid(trip_id), { removed: id });
     },
   );
+
+  // ----- checklist ------------------------------------------------------
+  server.tool(
+    "add_checklist_item",
+    "Add a checklist / packing item to the trip. category is one of Packing, To book, Documents, Health, Tech, Other. Pass an ISO date to pin it to a day so it surfaces in the Today view.",
+    {
+      trip_id: z.string().optional(),
+      text: z.string(),
+      category: z.enum(["Packing", "To book", "Documents", "Health", "Tech", "Other"]).optional(),
+      done: z.boolean().optional(),
+      date: z.string().optional(),
+    },
+    async ({ trip_id, text, category, done, date }) => {
+      const id = tid(trip_id);
+      const itemId = await q.addChecklistItem(DB(), { trip_id: id, text, category, done, date });
+      return withState(id, { checklist_item_id: itemId });
+    },
+  );
+
+  server.tool(
+    "update_checklist_item",
+    "Update a checklist item by id — tick it done, rename it, recategorise it, or change its pinned date.",
+    {
+      id: z.string(),
+      trip_id: z.string().optional(),
+      text: z.string().optional(),
+      category: z.enum(["Packing", "To book", "Documents", "Health", "Tech", "Other"]).optional(),
+      done: z.boolean().optional(),
+      date: z.string().optional(),
+    },
+    async ({ id, trip_id, ...fields }) => {
+      await q.updateChecklistItem(DB(), id, fields);
+      return withState(tid(trip_id), { checklist_item_id: id });
+    },
+  );
+
+  server.tool(
+    "remove_checklist_item",
+    "Delete a checklist item by id.",
+    { id: z.string(), trip_id: z.string().optional() },
+    async ({ id, trip_id }) => {
+      await q.removeChecklistItem(DB(), id);
+      return withState(tid(trip_id), { removed: id });
+    },
+  );
 }

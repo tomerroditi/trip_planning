@@ -1,22 +1,36 @@
 import { useState } from "react";
 import type { TripState } from "../types";
+import type { UseTrip } from "../useTrip";
+import { write } from "../api";
 import { C, FREDOKA, fmtMoney } from "../theme";
 import { budgetTotals } from "../derive";
 
-export function Budget({ state }: { state: TripState }) {
+export function Budget({ state, trip }: { state: TripState; trip: UseTrip }) {
   const [mode, setMode] = useState<"planned" | "actual">("planned");
   const currency = state.trip.currency || "NZD";
   const cap = state.trip.budget_cap ?? 0;
   const view = budgetTotals(state, mode);
   const travellers = (state.trip.travellers || "").split("&").filter((s) => s.trim()).length || 2;
 
+  const saveAmount = (catId: string, value: number) => {
+    trip.apply(
+      (s) => ({
+        ...s,
+        budget_categories: s.budget_categories.map((c) =>
+          c.id === catId ? { ...c, [mode]: value } : c,
+        ),
+      }),
+      () => write.patchBudget(trip.tripId, catId, { [mode]: value }),
+    );
+  };
+
   return (
-    <div className="fade-up" style={{ height: "100%", overflowY: "auto", padding: "28px 30px 50px" }}>
+    <div className="fade-up page-scroll">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
         <div>
           <h2 style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 24, margin: 0 }}>Budget</h2>
           <p style={{ fontSize: 13.5, color: C.muted, margin: "6px 0 0" }}>
-            {travellers} travellers · all amounts in {currency}
+            {travellers} travellers · all amounts in {currency} · tap a figure to edit
           </p>
         </div>
         <div style={{ display: "flex", background: "#EEE9DA", borderRadius: 13, padding: 4, gap: 4 }}>
@@ -42,7 +56,7 @@ export function Budget({ state }: { state: TripState }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 22 }}>
+      <div className="grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 22 }}>
         <div style={{ background: C.green, color: C.page, borderRadius: 20, padding: "22px 24px" }}>
           <div style={{ fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, color: "rgba(244,239,228,.66)" }}>Total budget</div>
           <div style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 38, marginTop: 8, lineHeight: 1 }}>{fmtMoney(cap, currency)}</div>
@@ -68,12 +82,12 @@ export function Budget({ state }: { state: TripState }) {
           const pct = cap ? Math.round((amt / cap) * 100) + "%" : "0%";
           return (
             <div key={cat.id} style={{ padding: "15px 0", borderBottom: "1px solid #EFEADC" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 9 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                  <span style={{ width: 11, height: 11, borderRadius: "50%", background: cat.color }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 9, gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                  <span style={{ width: 11, height: 11, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
                   <span style={{ fontWeight: 600, fontSize: 14.5 }}>{cat.name}</span>
                 </div>
-                <div style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 15 }}>{fmtMoney(amt, currency)}</div>
+                <AmountEditor amount={amt} currency={currency} onSave={(v) => saveAmount(cat.id, v)} />
               </div>
               <div style={{ height: 9, borderRadius: 6, background: "#EAE4D4", overflow: "hidden" }}>
                 <div style={{ height: "100%", width: pct, background: cat.color, borderRadius: 6, transition: "width .4s" }} />
@@ -83,7 +97,7 @@ export function Budget({ state }: { state: TripState }) {
         })}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 18 }}>
+      <div className="grid-responsive" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 18 }}>
         <div style={{ background: C.panel, border: `1px solid ${C.borderSoft}`, borderRadius: 18, padding: "18px 22px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 13.5, color: C.muted5, fontWeight: 600 }}>Per person</span>
           <span style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 22 }}>{fmtMoney(view.perPerson, currency)}</span>
@@ -94,5 +108,66 @@ export function Budget({ state }: { state: TripState }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function AmountEditor({ amount, currency, onSave }: { amount: number; currency: string; onSave: (v: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(Math.round(amount)));
+
+  if (editing) {
+    const commit = () => {
+      const n = Number(val.replace(/[^0-9.]/g, ""));
+      setEditing(false);
+      if (!Number.isNaN(n) && n !== amount) onSave(n);
+    };
+    return (
+      <input
+        autoFocus
+        value={val}
+        inputMode="decimal"
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        style={{
+          width: 110,
+          textAlign: "right",
+          fontFamily: FREDOKA,
+          fontWeight: 600,
+          fontSize: 15,
+          color: C.green,
+          border: `1.5px solid ${C.green}`,
+          borderRadius: 9,
+          padding: "5px 9px",
+          background: "#fff",
+        }}
+      />
+    );
+  }
+  return (
+    <button
+      onClick={() => {
+        setVal(String(Math.round(amount)));
+        setEditing(true);
+      }}
+      className="link-btn"
+      style={{
+        border: "1px solid transparent",
+        background: "transparent",
+        cursor: "pointer",
+        fontFamily: FREDOKA,
+        fontWeight: 600,
+        fontSize: 15,
+        color: C.ink,
+        padding: "5px 9px",
+        borderRadius: 9,
+      }}
+      title="Tap to edit"
+    >
+      {fmtMoney(amount, currency)}
+    </button>
   );
 }

@@ -25,7 +25,7 @@ export function Overview({ state, setTab }: { state: TripState; setTab: (t: Tab)
   const snapCats = state.budget_categories.slice(0, 4);
 
   return (
-    <div className="fade-up" style={{ height: "100%", overflowY: "auto", padding: "28px 30px 50px" }}>
+    <div className="fade-up page-scroll">
       {/* Hero */}
       <div
         style={{
@@ -83,7 +83,7 @@ export function Overview({ state, setTab }: { state: TripState; setTab: (t: Tab)
           </h3>
           <span style={{ fontSize: 13, color: C.muted2 }}>The trip, chaptered</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(segs.length, 5)}, 1fr)`, gap: 13 }}>
+        <div className="grid-responsive" style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(segs.length, 5)}, 1fr)`, gap: 13 }}>
           {segs.map((seg) => (
             <div key={seg.id} style={{ borderRadius: 18, overflow: "hidden", background: C.card, border: `1px solid ${C.borderSoft}` }}>
               <div style={{ height: 8, background: seg.color }} />
@@ -99,7 +99,7 @@ export function Overview({ state, setTab }: { state: TripState; setTab: (t: Tab)
       </div>
 
       {/* Attention + budget snapshot */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.35fr 1fr", gap: 18, marginTop: 28 }}>
+      <div className="grid-responsive" style={{ display: "grid", gridTemplateColumns: "1.35fr 1fr", gap: 18, marginTop: 28 }}>
         <div style={{ background: C.panel, border: `1px solid ${C.borderSoft}`, borderRadius: 20, padding: "22px 24px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <h3 style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 18, margin: 0 }}>Needs your attention</h3>

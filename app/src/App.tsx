@@ -1,53 +1,68 @@
 import { useState } from "react";
 import { useTrip } from "./useTrip";
+import { useIsMobile } from "./hooks";
 import { C, FREDOKA } from "./theme";
+import type { Tab } from "./nav";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
+import { MobileHeader, BottomNav } from "./components/MobileNav";
 import { Overview } from "./components/Overview";
+import { Today } from "./components/Today";
 import { Itinerary } from "./components/Itinerary";
 import { MapRoute } from "./components/MapRoute";
 import { Budget } from "./components/Budget";
 import { Stays } from "./components/Stays";
+import { Checklist } from "./components/Checklist";
+import { Explore } from "./components/Explore";
 import { Docs } from "./components/Docs";
 
-export type Tab = "overview" | "itinerary" | "map" | "budget" | "stays" | "docs";
+export type { Tab } from "./nav";
 
 export default function App() {
-  const { state, error, loading, refreshing, lastUpdated, refresh } = useTrip();
+  const trip = useTrip();
+  const { state, error, loading, refreshing, lastUpdated, refresh } = trip;
   const [tab, setTab] = useState<Tab>("overview");
+  const isMobile = useIsMobile();
 
   if (loading && !state) return <Splash />;
   if (!state) return <ErrorScreen error={error ?? "No trip found."} onRetry={refresh} />;
 
+  const content = (
+    <main style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}>
+      {tab === "overview" && <Overview state={state} setTab={setTab} />}
+      {tab === "today" && <Today state={state} setTab={setTab} trip={trip} />}
+      {tab === "itinerary" && <Itinerary state={state} trip={trip} />}
+      {tab === "map" && <MapRoute state={state} />}
+      {tab === "budget" && <Budget state={state} trip={trip} />}
+      {tab === "stays" && <Stays state={state} trip={trip} />}
+      {tab === "checklist" && <Checklist state={state} trip={trip} />}
+      {tab === "explore" && <Explore state={state} trip={trip} />}
+      {tab === "docs" && <Docs state={state} />}
+    </main>
+  );
+
+  if (isMobile) {
+    return (
+      <div
+        className="app-shell"
+        style={{ display: "flex", flexDirection: "column", width: "100%", background: C.page, color: C.ink, overflow: "hidden" }}
+      >
+        <MobileHeader state={state} refreshing={refreshing} lastUpdated={lastUpdated} onRefresh={refresh} />
+        {content}
+        <BottomNav state={state} tab={tab} setTab={setTab} />
+      </div>
+    );
+  }
+
   return (
     <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        width: "100%",
-        background: C.page,
-        color: C.ink,
-        overflow: "hidden",
-      }}
+      className="app-shell"
+      style={{ display: "flex", width: "100%", background: C.page, color: C.ink, overflow: "hidden" }}
     >
       <Sidebar state={state} tab={tab} setTab={setTab} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <Header
-          state={state}
-          tab={tab}
-          setTab={setTab}
-          refreshing={refreshing}
-          lastUpdated={lastUpdated}
-          onRefresh={refresh}
-        />
-        <main style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}>
-          {tab === "overview" && <Overview state={state} setTab={setTab} />}
-          {tab === "itinerary" && <Itinerary state={state} />}
-          {tab === "map" && <MapRoute state={state} />}
-          {tab === "budget" && <Budget state={state} />}
-          {tab === "stays" && <Stays state={state} />}
-          {tab === "docs" && <Docs state={state} />}
-        </main>
+        <Header state={state} tab={tab} setTab={setTab} refreshing={refreshing} lastUpdated={lastUpdated} onRefresh={refresh} />
+        {content}
       </div>
     </div>
   );
@@ -56,15 +71,8 @@ export default function App() {
 function Splash() {
   return (
     <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        background: C.page,
-      }}
+      className="app-shell"
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.page }}
     >
       <div
         style={{
@@ -91,8 +99,8 @@ function Splash() {
 function ErrorScreen({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div
+      className="app-shell"
       style={{
-        height: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

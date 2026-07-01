@@ -12,6 +12,8 @@ export type {
   BudgetCategory,
   DocumentItem,
   Note,
+  ChecklistItem,
+  ChecklistCategory,
   TripState,
   StayStatus,
   DocumentKind,

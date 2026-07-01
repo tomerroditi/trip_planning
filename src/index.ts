@@ -7,6 +7,7 @@
 
 import type { Env } from "./env";
 import { handleApi } from "./api/trip";
+import { handleWrite } from "./api/write";
 import { corsPreflight, jsonError } from "./lib/http";
 import { TripMcp } from "./mcp/server";
 
@@ -47,7 +48,11 @@ export default {
 
     if (pathname.startsWith("/api/")) {
       try {
-        return await handleApi(url, request, env);
+        // GET (and HEAD) → read API; POST/PATCH/DELETE → write API.
+        if (request.method === "GET" || request.method === "HEAD") {
+          return await handleApi(url, request, env);
+        }
+        return await handleWrite(url, request, env);
       } catch (err) {
         return jsonError(err instanceof Error ? err.message : "Internal error", 500);
       }

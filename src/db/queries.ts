@@ -6,6 +6,7 @@ import type {
   Accommodation,
   Booking,
   BudgetCategory,
+  ChecklistItem,
   Day,
   DayGroup,
   DayWithItems,
@@ -17,6 +18,7 @@ import type {
   Trip,
   TripState,
 } from "../../shared/types";
+import type { ChecklistRow } from "./schema";
 import type { PlanItemRow } from "./schema";
 import { newId } from "../lib/id";
 import { buildSeedRows, SEED_TABLES, TRIP as SEED_TRIP } from "./seed";
@@ -33,6 +35,7 @@ const COLUMNS = {
   budget_categories: ["id", "trip_id", "position", "name", "color", "planned", "actual"],
   documents: ["id", "trip_id", "title", "subtitle", "kind", "category", "url", "created_at"],
   notes: ["id", "trip_id", "date", "text", "created_at"],
+  checklist_items: ["id", "trip_id", "position", "text", "category", "done", "date", "created_at"],
 } as const;
 
 type TableName = keyof typeof COLUMNS;
@@ -89,6 +92,18 @@ async function selectAll<T>(DB: D1Database, sql: string, ...binds: unknown[]): P
   return results ?? [];
 }
 
+// Like selectAll, but tolerates a missing table (returns []). Used for tables
+// added by a later migration so the read path still works if `db:migrate`
+// hasn't been run on the deployed database yet.
+async function selectAllOptional<T>(DB: D1Database, sql: string, ...binds: unknown[]): Promise<T[]> {
+  try {
+    return await selectAll<T>(DB, sql, ...binds);
+  } catch (err) {
+    if (err instanceof Error && /no such table/i.test(err.message)) return [];
+    throw err;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
@@ -102,7 +117,7 @@ export async function getTripState(DB: D1Database, tripId: string): Promise<Trip
   const trip = await getTrip(DB, tripId);
   if (!trip) return null;
 
-  const [segments, days, itemRows, accommodations, bookings, budget_categories, documents, notes] =
+  const [segments, days, itemRows, accommodations, bookings, budget_categories, documents, notes, checkRows] =
     await Promise.all([
       selectAll<Segment>(DB, "SELECT * FROM segments WHERE trip_id = ? ORDER BY position, name", tripId),
       selectAll<Day>(DB, "SELECT * FROM days WHERE trip_id = ? ORDER BY position", tripId),
@@ -112,6 +127,7 @@ export async function getTripState(DB: D1Database, tripId: string): Promise<Trip
       selectAll<BudgetCategory>(DB, "SELECT * FROM budget_categories WHERE trip_id = ? ORDER BY position", tripId),
       selectAll<DocumentItem>(DB, "SELECT * FROM documents WHERE trip_id = ? ORDER BY created_at DESC, rowid", tripId),
       selectAll<Note>(DB, "SELECT * FROM notes WHERE trip_id = ? ORDER BY created_at DESC, rowid", tripId),
+      selectAllOptional<ChecklistRow>(DB, "SELECT * FROM checklist_items WHERE trip_id = ? ORDER BY position, rowid", tripId),
     ]);
 
   const items = itemRows.map(toPlanItem);
@@ -156,6 +172,17 @@ export async function getTripState(DB: D1Database, tripId: string): Promise<Trip
     });
   }
 
+  const checklist: ChecklistItem[] = checkRows.map((r) => ({
+    id: r.id,
+    trip_id: r.trip_id,
+    position: r.position,
+    text: r.text,
+    category: r.category || "Other",
+    done: r.done === 1,
+    date: r.date,
+    created_at: r.created_at,
+  }));
+
   return {
     trip,
     segments: segmentsWithDays,
@@ -164,6 +191,7 @@ export async function getTripState(DB: D1Database, tripId: string): Promise<Trip
     budget_categories,
     documents,
     notes,
+    checklist,
   };
 }
 
@@ -515,6 +543,13 @@ export async function setBudgetCategory(DB: D1Database, input: BudgetInput): Pro
   return id;
 }
 
+// Update an existing budget category by id (used by the app's inline editing;
+// the MCP path upserts by name via setBudgetCategory).
+export async function updateBudgetCategoryById(DB: D1Database, id: string, fields: Row): Promise<void> {
+  const stmt = updateStmt(DB, "budget_categories", id, fields);
+  if (stmt) await stmt.run();
+}
+
 // ---------------------------------------------------------------------------
 // Documents
 // ---------------------------------------------------------------------------
@@ -562,4 +597,43 @@ export async function addNote(DB: D1Database, tripId: string, text: string, date
 
 export async function removeNote(DB: D1Database, id: string): Promise<void> {
   await DB.prepare("DELETE FROM notes WHERE id = ?").bind(id).run();
+}
+
+// ---------------------------------------------------------------------------
+// Checklist / packing items
+// ---------------------------------------------------------------------------
+
+export interface ChecklistInput {
+  trip_id: string;
+  text: string;
+  category?: string;
+  done?: boolean;
+  date?: string;
+}
+
+export async function addChecklistItem(DB: D1Database, input: ChecklistInput): Promise<string> {
+  const id = newId("chk");
+  const position = await nextPosition(DB, "checklist_items", "trip_id = ?", input.trip_id);
+  await insertStmt(DB, "checklist_items", {
+    id,
+    trip_id: input.trip_id,
+    position,
+    text: input.text,
+    category: input.category ?? "Packing",
+    done: input.done ? 1 : 0,
+    date: input.date ?? null,
+    created_at: new Date().toISOString(),
+  }).run();
+  return id;
+}
+
+export async function updateChecklistItem(DB: D1Database, id: string, fields: Row): Promise<void> {
+  const patch: Row = { ...fields };
+  if (typeof patch.done === "boolean") patch.done = patch.done ? 1 : 0;
+  const stmt = updateStmt(DB, "checklist_items", id, patch);
+  if (stmt) await stmt.run();
+}
+
+export async function removeChecklistItem(DB: D1Database, id: string): Promise<void> {
+  await DB.prepare("DELETE FROM checklist_items WHERE id = ?").bind(id).run();
 }

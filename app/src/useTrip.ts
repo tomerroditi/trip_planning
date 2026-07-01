@@ -1,5 +1,6 @@
 // Loads the trip and keeps it live: polls every 12s, refetches when the window
-// regains focus/visibility, and exposes a manual refresh (spec §9).
+// regains focus/visibility, and exposes a manual refresh (spec §9). Also
+// supports optimistic in-app edits via apply().
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTrip, tripIdFromUrl } from "./api";
@@ -9,11 +10,16 @@ const POLL_MS = 12000;
 
 export interface UseTrip {
   state: TripState | null;
+  tripId: string | null;
   error: string | null;
   loading: boolean;
   refreshing: boolean;
   lastUpdated: number | null;
   refresh: () => void;
+  // Optimistically apply `optimistic(state)` locally, then run `request` (a
+  // write call that resolves to the fresh server state). On failure, reload to
+  // revert. Returns the request promise so callers can await/catch.
+  apply: (optimistic: (s: TripState) => TripState, request: () => Promise<{ state: TripState }>) => Promise<void>;
 }
 
 export function useTrip(): UseTrip {
@@ -55,5 +61,30 @@ export function useTrip(): UseTrip {
     };
   }, [load]);
 
-  return { state, error, loading, refreshing, lastUpdated, refresh: () => void load() };
+  const apply = useCallback(
+    async (optimistic: (s: TripState) => TripState, request: () => Promise<{ state: TripState }>) => {
+      setState((prev) => (prev ? optimistic(prev) : prev));
+      try {
+        const { state: fresh } = await request();
+        setState(fresh);
+        setLastUpdated(Date.now());
+        setError(null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Couldn't save change");
+        void load(); // revert to server truth
+      }
+    },
+    [load],
+  );
+
+  return {
+    state,
+    tripId: tripId.current,
+    error,
+    loading,
+    refreshing,
+    lastUpdated,
+    refresh: () => void load(),
+    apply,
+  };
 }

@@ -3,14 +3,17 @@ import { makeD1 } from "./helpers/d1";
 import {
   addAccommodation,
   addBooking,
+  addChecklistItem,
   addPlanItem,
   ensureSeed,
   getDayGroups,
   getTripState,
   removeAccommodation,
+  removeChecklistItem,
   setBudgetCategory,
   setDayPlan,
   updateAccommodation,
+  updateChecklistItem,
   updatePlanItem,
 } from "../src/db/queries";
 import { TRIP } from "../src/db/seed";
@@ -157,5 +160,27 @@ describe("mutations", () => {
     const b = state!.bookings.find((x) => x.id === id);
     expect(b?.title).toBe("Jet boat");
     expect(b?.lat).toBeCloseTo(-44.847);
+  });
+
+  it("add/update/remove checklist item round-trips", async () => {
+    const state0 = await getTripState(DB, TRIP.id);
+    expect(state0!.checklist).toEqual([]); // empty until items are added
+
+    const id = await addChecklistItem(DB, { trip_id: TRIP.id, text: "Pack rain jacket", category: "Packing" });
+    let state = await getTripState(DB, TRIP.id);
+    const item = state!.checklist.find((c) => c.id === id);
+    expect(item?.text).toBe("Pack rain jacket");
+    expect(item?.category).toBe("Packing");
+    expect(item?.done).toBe(false);
+
+    await updateChecklistItem(DB, id, { done: true, date: "2026-10-04" });
+    state = await getTripState(DB, TRIP.id);
+    const done = state!.checklist.find((c) => c.id === id);
+    expect(done?.done).toBe(true);
+    expect(done?.date).toBe("2026-10-04");
+
+    await removeChecklistItem(DB, id);
+    state = await getTripState(DB, TRIP.id);
+    expect(state!.checklist.find((c) => c.id === id)).toBeUndefined();
   });
 });

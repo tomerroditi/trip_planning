@@ -13,7 +13,7 @@ export function Docs({ state }: { state: TripState }) {
   const filters = ["all", ...CAT_OPTIONS];
 
   return (
-    <div className="fade-up" style={{ height: "100%", overflowY: "auto", padding: "28px 30px 50px" }}>
+    <div className="fade-up page-scroll">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ fontFamily: FREDOKA, fontWeight: 600, fontSize: 24, margin: 0 }}>Documents &amp; links</h2>
@@ -48,7 +48,7 @@ export function Docs({ state }: { state: TripState }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14, marginTop: 20 }}>
+      <div className="grid-responsive" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14, marginTop: 20 }}>
         {visible.map((d) => {
           const km = KIND[d.kind] || KIND.Doc;
           const hasUrl = !!d.url && d.url !== "#";

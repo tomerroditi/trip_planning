@@ -1,14 +1,32 @@
 import { useState } from "react";
 import { resolveLoc } from "../../../shared/geo";
 import type { DayWithItems, TripState } from "../types";
+import type { UseTrip } from "../useTrip";
+import { write } from "../api";
 import { C, FREDOKA } from "../theme";
 
-export function Itinerary({ state }: { state: TripState }) {
+export function Itinerary({ state, trip }: { state: TripState; trip: UseTrip }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggle = (id: string) => setCollapsed((c) => ({ ...c, [id]: !c[id] }));
 
+  const toggleItem = (itemId: string, done: boolean) => {
+    trip.apply(
+      (s) => ({
+        ...s,
+        segments: s.segments.map((seg) => ({
+          ...seg,
+          days: seg.days.map((d) => ({
+            ...d,
+            items: d.items.map((it) => (it.id === itemId ? { ...it, done } : it)),
+          })),
+        })),
+      }),
+      () => write.patchPlanItem(trip.tripId, itemId, { done }),
+    );
+  };
+
   return (
-    <div className="fade-up" style={{ height: "100%", overflowY: "auto", padding: "24px 30px 60px" }}>
+    <div className="fade-up page-scroll">
       {state.segments.map((seg) => {
         const open = !collapsed[seg.id];
         return (
@@ -34,7 +52,7 @@ export function Itinerary({ state }: { state: TripState }) {
             {open && (
               <div style={{ padding: "2px 22px 12px" }}>
                 {seg.days.map((day) => (
-                  <DayRow key={day.id} day={day} segColor={seg.color} segSoft={seg.soft_color} />
+                  <DayRow key={day.id} day={day} segColor={seg.color} segSoft={seg.soft_color} onToggle={toggleItem} />
                 ))}
               </div>
             )}
@@ -45,7 +63,7 @@ export function Itinerary({ state }: { state: TripState }) {
   );
 }
 
-function DayRow({ day, segColor, segSoft }: { day: DayWithItems; segColor: string; segSoft: string }) {
+function DayRow({ day, segColor, segSoft, onToggle }: { day: DayWithItems; segColor: string; segSoft: string; onToggle: (id: string, done: boolean) => void }) {
   const located = day.lat != null || !!resolveLoc(day.location_name);
   const driveBg = day.drive_kind === "FLY" ? "#E7EEF2" : "#F4ECDD";
   const driveFg = day.drive_kind === "FLY" ? "#3E6B8E" : "#A8744A";
@@ -78,7 +96,13 @@ function DayRow({ day, segColor, segSoft }: { day: DayWithItems; segColor: strin
         </div>
         <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 1 }}>
           {day.items.map((item) => (
-            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "7px 7px", borderRadius: 10, width: "100%" }}>
+            <button
+              key={item.id}
+              onClick={() => onToggle(item.id, !item.done)}
+              className="row-hover"
+              title={item.done ? "Mark as not done" : "Mark as done"}
+              style={{ display: "flex", alignItems: "center", gap: 11, padding: "8px 7px", borderRadius: 10, width: "100%", border: "none", background: "transparent", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}
+            >
               <span
                 style={{
                   width: 20,
@@ -98,10 +122,13 @@ function DayRow({ day, segColor, segSoft }: { day: DayWithItems; segColor: strin
                 {item.done ? "✓" : ""}
               </span>
               <span style={{ flex: 1, fontSize: 14, color: item.done ? "#AAB0A2" : C.ink2, textDecoration: item.done ? "line-through" : "none" }}>{item.title}</span>
+              {item.start_time && (
+                <span style={{ fontSize: 11.5, color: C.muted3, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{item.start_time}</span>
+              )}
               {item.tag && (
                 <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".03em", color: segColor, background: segSoft, padding: "3px 9px", borderRadius: 20, whiteSpace: "nowrap" }}>{item.tag}</span>
               )}
-            </div>
+            </button>
           ))}
           {day.items.length === 0 && <div style={{ fontSize: 13, color: C.muted3, padding: "4px 7px" }}>No activities yet — ask Claude to add some.</div>}
         </div>

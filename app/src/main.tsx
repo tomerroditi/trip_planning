@@ -10,3 +10,13 @@ createRoot(el).render(
     <App />
   </React.StrictMode>,
 );
+
+// Register the service worker for offline support / installability. Dev runs
+// over http on localhost (allowed); production is https.
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      /* offline support is best-effort */
+    });
+  });
+}

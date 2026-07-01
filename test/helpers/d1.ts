@@ -4,7 +4,7 @@
 // and queries without a Cloudflare runtime.
 
 import Database from "better-sqlite3";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -69,7 +69,10 @@ export class FakeD1 {
 export function makeDb(opts: { withSeedSql?: boolean } = {}): Database.Database {
   const db = new Database(":memory:");
   db.pragma("foreign_keys = OFF");
-  db.exec(readFileSync(resolve(root, "migrations/0001_init.sql"), "utf8"));
+  const migDir = resolve(root, "migrations");
+  for (const f of readdirSync(migDir).filter((f) => f.endsWith(".sql")).sort()) {
+    db.exec(readFileSync(resolve(migDir, f), "utf8"));
+  }
   if (opts.withSeedSql) db.exec(readFileSync(resolve(root, "seed/seed.sql"), "utf8"));
   return db;
 }

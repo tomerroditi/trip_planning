@@ -130,3 +130,14 @@ export interface NoteRow {
   text: string;
   created_at: string;
 }
+
+export interface ChecklistRow {
+  id: string;
+  trip_id: string;
+  position: number;
+  text: string;
+  category: string;
+  done: number; // 0 | 1
+  date: string | null;
+  created_at: string;
+}

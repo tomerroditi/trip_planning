@@ -150,6 +150,25 @@ export interface Note {
   created_at: string;
 }
 
+export type ChecklistCategory =
+  | "Packing"
+  | "To book"
+  | "Documents"
+  | "Health"
+  | "Tech"
+  | "Other";
+
+export interface ChecklistItem {
+  id: string;
+  trip_id: string;
+  position: number;
+  text: string;
+  category: string; // ChecklistCategory (kept loose to match free-text writes)
+  done: boolean;
+  date: string | null; // optional ISO date to pin to a day
+  created_at: string;
+}
+
 // A day with its ordered plan items inlined.
 export interface DayWithItems extends Day {
   items: PlanItem[];
@@ -169,6 +188,7 @@ export interface TripState {
   budget_categories: BudgetCategory[];
   documents: DocumentItem[];
   notes: Note[];
+  checklist: ChecklistItem[];
 }
 
 // Convenience shape for GET /api/trip/:id/days.
