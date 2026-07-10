@@ -1,5 +1,12 @@
 # Kiwiroute — a conversational trip planner
 
+[![Live app](https://img.shields.io/website?url=https%3A%2F%2Ftrip-planning.tomerroditi1.workers.dev%2Fapi%2Fhealth&label=live%20app&up_message=online&up_color=brightgreen&down_message=offline&down_color=lightgrey)](https://trip-planning.tomerroditi1.workers.dev/)
+
+**🔗 Live deployment:** <https://trip-planning.tomerroditi1.workers.dev/> &nbsp;·&nbsp; **MCP endpoint:** `https://trip-planning.tomerroditi1.workers.dev/mcp`
+
+The app deploys from this repo to Cloudflare Workers on every push, so the link
+above always points at the latest deployment.
+
 You plan a trip by **talking to Claude**. Claude writes structured trip data —
 where you're staying, your bookings, the day-by-day plan — into a database via a
 custom **MCP server**. A separate **React + Leaflet web app** renders that data,
@@ -128,14 +135,15 @@ npm run deploy                # builds app/dist, then `wrangler deploy`
 
 `npm run deploy` runs `gen:seed` + `vite build` + `wrangler deploy`. Note the
 deployed URL — your endpoints are `https://<worker>.<subdomain>.workers.dev/mcp`
-and `…/` for the app.
+and `…/` for the app. This project's live deployment is
+<https://trip-planning.tomerroditi1.workers.dev/>.
 
 ## Connect it to Claude
 
 1. In **claude.ai → Settings → Connectors → Add custom connector**.
-2. Paste your `/mcp` URL: `https://<worker>.<subdomain>.workers.dev/mcp`.
+2. Paste your `/mcp` URL: `https://trip-planning.tomerroditi1.workers.dev/mcp`.
 3. Enable the connector in a conversation via the **+** menu.
-4. Open the app URL (`https://<worker>.<subdomain>.workers.dev/`) in a browser tab.
+4. Open the app URL (`https://trip-planning.tomerroditi1.workers.dev/`) in a browser tab.
 5. Chat: *"Move our Queenstown check-in to the 9th and add a jet-boat booking on
    the 8th."* Watch the itinerary and map update — the app polls every ~12s and
    refetches when you focus the tab (there's also a refresh button in the header).
